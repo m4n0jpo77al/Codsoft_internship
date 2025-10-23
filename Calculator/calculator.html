@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator - Manoj Pottal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="calculator.css" rel="stylesheet">
+</head>
+
+<body>
+    <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="calculator-container">
+        <div class="calculator-header">
+            <h1 class="calculator-title">Calculator</h1>
+            <p class="calculator-subtitle">Built with HTML, CSS & JavaScript</p>
+        </div>
+
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorText">Error: Invalid operation</span>
+        </div>
+
+        <div class="display">
+            <div class="display-expression" id="expression">0</div>
+            <div class="display-result" id="result">0</div>
+        </div>
+
+        <div class="buttons-grid">
+            <!-- Row 1 -->
+            <button class="btn btn-clear" onclick="clearAll()">
+                <i class="fas fa-undo btn-icon"></i>
+                Clear
+            </button>
+            <button class="btn btn-delete" onclick="deleteLast()">
+                <i class="fas fa-backspace btn-icon"></i>
+                Del
+            </button>
+            <button class="btn btn-operator" onclick="inputOperator('/')">
+                <i class="fas fa-divide"></i>
+            </button>
+
+            <!-- Row 2 -->
+            <button class="btn btn-number" onclick="inputNumber('7')">7</button>
+            <button class="btn btn-number" onclick="inputNumber('8')">8</button>
+            <button class="btn btn-number" onclick="inputNumber('9')">9</button>
+            <button class="btn btn-operator" onclick="inputOperator('*')">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Row 3 -->
+            <button class="btn btn-number" onclick="inputNumber('4')">4</button>
+            <button class="btn btn-number" onclick="inputNumber('5')">5</button>
+            <button class="btn btn-number" onclick="inputNumber('6')">6</button>
+            <button class="btn btn-operator" onclick="inputOperator('-')">
+                <i class="fas fa-minus"></i>
+            </button>
+
+            <!-- Row 4 -->
+            <button class="btn btn-number" onclick="inputNumber('1')">1</button>
+            <button class="btn btn-number" onclick="inputNumber('2')">2</button>
+            <button class="btn btn-number" onclick="inputNumber('3')">3</button>
+            <button class="btn btn-operator" onclick="inputOperator('+')">
+                <i class="fas fa-plus"></i>
+            </button>
+
+            <!-- Row 5 -->
+            <button class="btn btn-number btn-zero" onclick="inputNumber('0')">0</button>
+            <button class="btn btn-number" onclick="inputDecimal()">.</button>
+            <button class="btn btn-equals" onclick="calculate()">
+                <i class="fas fa-equals"></i>
+                =
+            </button>
+        </div>
+
+        <div class="history">
+            <div class="history-title">
+                <i class="fas fa-history"></i>
+                Calculation History
+            </div>
+            <div class="history-list" id="historyList">
+                <!-- History items will be added here -->
+            </div>
+            <button class="clear-history" onclick="clearHistory()">
+                <i class="fas fa-trash"></i>
+                Clear History
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Calculator state
+        let currentInput = '0';
+        let previousInput = '';
+        let operator = '';
+        let shouldResetDisplay = false;
+        let calculationHistory = [];
+
+        // DOM elements
+        const resultDisplay = document.getElementById('result');
+        const expressionDisplay = document.getElementById('expression');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const historyList = document.getElementById('historyList');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Initialize calculator
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDisplay();
+            loadHistory();
+            setupKeyboardSupport();
+            setupThemeToggle();
+        });
+
+        // Number input function
+        function inputNumber(num) {
+            hideError();
+            
+            if (shouldResetDisplay) {
+                currentInput = num;
+                shouldResetDisplay = false;
+            } else {
+                if (currentInput === '0') {
+                    currentInput = num;
+                } else {
+                    currentInput += num;
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        // Decimal input function
+        function inputDecimal() {
+            hideError();
+            
+            if (shouldResetDisplay) {
+                currentInput = '0.';
+                shouldResetDisplay = false;
+            } else if (currentInput.indexOf('.') === -1) {
+                currentInput += '.';
+            }
+            
+            updateDisplay();
+        }
+
+        // Operator input function
+        function inputOperator(op) {
+            hideError();
+            
+            if (operator && !shouldResetDisplay) {
+                calculate();
+            }
+            
+            previousInput = currentInput;
+            operator = op;
+            shouldResetDisplay = true;
+            
+            updateExpression();
+        }
+
+        // Calculate function
+        function calculate() {
+            hideError();
+            
+            if (!operator || !previousInput) {
+                return;
+            }
+            
+            const prev = parseFloat(previousInput);
+            const current = parseFloat(currentInput);
+            let result;
+            
+            try {
+                switch (operator) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            throw new Error('Division by zero');
+                        }
+                        result = prev / current;
+                        break;
+                    default:
+                        throw new Error('Invalid operator');
+                }
+                
+                // Round result to avoid floating point precision issues
+                result = Math.round(result * 100000000) / 100000000;
+                
+                // Add to history
+                const expression = `${previousInput} ${operator} ${currentInput} = ${result}`;
+                addToHistory(expression);
+                
+                // Update display
+                currentInput = result.toString();
+                previousInput = '';
+                operator = '';
+                shouldResetDisplay = true;
+                
+                updateDisplay();
+                updateExpression();
+                
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Clear all function
+        function clearAll() {
+            hideError();
+            currentInput = '0';
+            previousInput = '';
+            operator = '';
+            shouldResetDisplay = false;
+            updateDisplay();
+            updateExpression();
+        }
+
+        // Delete last character function
+        function deleteLast() {
+            hideError();
+            
+            if (currentInput.length > 1) {
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                currentInput = '0';
+            }
+            
+            updateDisplay();
+        }
+
+        // Update display function
+        function updateDisplay() {
+            resultDisplay.textContent = formatNumber(currentInput);
+        }
+
+        // Update expression display
+        function updateExpression() {
+            if (previousInput && operator) {
+                expressionDisplay.textContent = `${formatNumber(previousInput)} ${operator}`;
+            } else {
+                expressionDisplay.textContent = '';
+            }
+        }
+
+        // Format number for display
+        function formatNumber(num) {
+            const number = parseFloat(num);
+            if (isNaN(number)) return '0';
+            
+            // Handle very large or very small numbers
+            if (Math.abs(number) >= 1e15 || (Math.abs(number) < 1e-10 && number !== 0)) {
+                return number.toExponential(6);
+            }
+            
+            // Format with commas for large numbers
+            if (Math.abs(number) >= 1000) {
+                return number.toLocaleString();
+            }
+            
+            return number.toString();
+        }
+
+        // Show error message
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.add('show');
+            
+            // Auto-hide error after 3 seconds
+            setTimeout(() => {
+                hideError();
+            }, 3000);
+        }
+
+        // Hide error message
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+
+        // Add calculation to history
+        function addToHistory(expression) {
+            calculationHistory.unshift(expression);
+            
+            // Keep only last 10 calculations
+            if (calculationHistory.length > 10) {
+                calculationHistory = calculationHistory.slice(0, 10);
+            }
+            
+            updateHistoryDisplay();
+            saveHistory();
+        }
+
+        // Update history display
+        function updateHistoryDisplay() {
+            historyList.innerHTML = '';
+            
+            calculationHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.textContent = item;
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        // Clear history
+        function clearHistory() {
+            calculationHistory = [];
+            updateHistoryDisplay();
+            saveHistory();
+        }
+
+        // Save history to localStorage
+        function saveHistory() {
+            localStorage.setItem('calculatorHistory', JSON.stringify(calculationHistory));
+        }
+
+        // Load history from localStorage
+        function loadHistory() {
+            const saved = localStorage.getItem('calculatorHistory');
+            if (saved) {
+                calculationHistory = JSON.parse(saved);
+                updateHistoryDisplay();
+            }
+        }
+
+        // Keyboard support
+        function setupKeyboardSupport() {
+            document.addEventListener('keydown', function(event) {
+                const key = event.key;
+                
+                // Prevent default for calculator keys
+                if ('0123456789+-*/.='.includes(key) || key === 'Enter' || key === 'Escape' || key === 'Backspace') {
+                    event.preventDefault();
+                }
+                
+                if ('0123456789'.includes(key)) {
+                    inputNumber(key);
+                } else if (key === '.') {
+                    inputDecimal();
+                } else if ('+-*/'.includes(key)) {
+                    inputOperator(key);
+                } else if (key === '=' || key === 'Enter') {
+                    calculate();
+                } else if (key === 'Escape') {
+                    clearAll();
+                } else if (key === 'Backspace') {
+                    deleteLast();
+                }
+            });
+        }
+
+        // Theme toggle functionality
+        function setupThemeToggle() {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                
+                themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('darkMode', isDark);
+            });
+        }
+
+        // Animation for button clicks
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // Add some fun animations
+        function addButtonAnimations() {
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach((btn, index) => {
+                btn.style.animationDelay = `${index * 0.05}s`;
+                btn.style.animation = 'fadeInUp 0.5s ease forwards';
+            });
+        }
+
+        // CSS for animations
+        const animationCSS = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        
+        const style = document.createElement('style');
+        style.textContent = animationCSS;
+        document.head.appendChild(style);
+
+        // Initialize animations
+        addButtonAnimations();
+    </script>
+</body>
+</html>
